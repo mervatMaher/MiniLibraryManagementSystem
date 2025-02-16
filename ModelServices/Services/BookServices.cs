@@ -89,6 +89,116 @@ namespace MiniLibraryManagementSystem.ModelServices.Services
 
             return false;
         }
+        public async Task<object> AddExistAuthorsInBookAsync(int BookId, ICollection<int> AuthorsIds)
+        {
+            var existBook = await _context.Books.FindAsync(BookId);
+
+
+            foreach (var autherId in AuthorsIds)
+            {
+                var existAuthor = await _context.Authors.Where(a => a.Id == autherId).FirstOrDefaultAsync();
+                if (existAuthor != null)
+                {
+                    var existAuthorInBook = await _context.BookAuthors.Where(ba => ba.BookId == BookId
+                    && ba.AuthorId == autherId).FirstOrDefaultAsync();
+
+                    if (existAuthorInBook != null)
+                    {
+                        var existAuthorWithBookMessage = new
+                        {
+                            Messsage = "this Author Already In This Book",
+                            BookId = existBook.Id,
+                            BookTitle = existBook.Title,
+
+                            Authors = await _context.BookAuthors.Where(ba => ba.BookId == BookId)
+                            .Include(ba => ba.author)
+                            .Select(b => new
+                            {
+                                AuthorId = b.AuthorId,
+                                AuthorName = b.author.FullName
+                            }).ToListAsync()
+
+                        };
+
+                        return existAuthorWithBookMessage;
+                    }
+
+                    var BookAuthor = new BookAuthor
+                    {
+                        BookId = BookId,
+                        AuthorId = autherId
+                    };
+                    _context.BookAuthors.Add(BookAuthor);
+                    await _context.SaveChangesAsync();
+
+                }
+
+            }
+
+            var AuthorsInBook = await _context.Books.Where(b => b.Id == BookId)
+                .Include(a => a.BookAuthors)
+                .ThenInclude(b => b.author)
+                .FirstOrDefaultAsync();
+
+            var AuthorsInBookDto = _mapper.Map<BookWithAllAuthorsDto>(AuthorsInBook);
+
+            return AuthorsInBookDto;
+
+        }
+        public async Task<List<BookDetailsDto>> GetBooksAsync()
+        {
+            var books = await _context.Books.ToListAsync();
+            var booksDto = _mapper.Map<List<BookDetailsDto>>(books);
+
+            return booksDto;
+        }
+        public async Task<BookDetailsDto> GetBookByIdAsync(int BookId)
+        {
+            var findBook = await _context.Books.FindAsync(BookId);
+
+            var BookDetailDto = _mapper.Map<BookDetailsDto>(findBook);
+
+            return BookDetailDto;
+        }
+        public async Task<List<AuthorDto>> AllAuthorsInBook(int BookId)
+        {
+
+            var AuthorsInBooks = await _context.BookAuthors.Where(ba => ba.BookId == BookId)
+                .Include(b => b.author)
+                .ToListAsync();
+
+            var AuthorsInBookDto = _mapper.Map<List<AuthorDto>>(AuthorsInBooks);
+
+            return AuthorsInBookDto;
+        }
+        public async Task<List<BookDetailsDto>> FilterWithPriceAsync(FilterWithPriceViewModel filterWithPrice)
+        {
+
+            if (string.IsNullOrWhiteSpace(filterWithPrice.Currency)
+                || filterWithPrice.Currency.Trim().ToLower() == "string")
+            {
+
+                var booksWithoutCurrency = await _context.Books.Where(b => b.Price == filterWithPrice.Price
+                || (b.Price >= filterWithPrice.Price - 50 && b.Price <= filterWithPrice.Price + 50)
+              ).ToListAsync();
+
+                var booksDtoPriceOnly = _mapper.Map<List<BookDetailsDto>>(booksWithoutCurrency);
+
+                return booksDtoPriceOnly;
+
+            }
+
+
+            var booksWithPrice = await _context.Books.Where(b =>
+            (b.Price == filterWithPrice.Price
+            || (b.Price >= filterWithPrice.Price - 50 && b.Price <= filterWithPrice.Price + 50))
+            && b.Currency == filterWithPrice.Currency)
+                .ToListAsync();
+
+            var BooksDtoMAin = _mapper.Map<List<BookDetailsDto>>(booksWithPrice);
+
+            return BooksDtoMAin;
+        }
 
     }
 }

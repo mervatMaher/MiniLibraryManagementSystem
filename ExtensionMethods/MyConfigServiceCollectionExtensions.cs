@@ -5,7 +5,6 @@ using MiniLibraryManagementSystem.ModelServices.IServices;
 using MiniLibraryManagementSystem.ModelServices.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using MiniLibraryManagementSystem.HelperServices.Services;
 
 namespace MiniLibraryManagementSystem.ExtensionMethods
 {
@@ -49,8 +48,10 @@ namespace MiniLibraryManagementSystem.ExtensionMethods
             services.AddScoped<IBookServices, BookServices>();
             services.AddScoped<IFavoriteServices, FavoriteServices>();
             services.AddScoped<IUploadFilesServices, UploadFilesServices>();
-            services.AddScoped<IConfirmationEmails, ConfirmationEmails>();           
+            services.AddScoped<IConfirmationEmails, ConfirmationEmails>();  
+            services.AddScoped<IAuthorServices, AuthorServices>();
             services.AddSingleton<IEmailSender, EmailSender>();
+
             
 
             return services;

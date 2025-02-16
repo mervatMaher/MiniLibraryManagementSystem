@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using static System.Net.WebRequestMethods;
+using MiniLibraryManagementSystem.SeedData;
 
 namespace MiniLibraryManagementSystem
 {
@@ -69,6 +70,13 @@ namespace MiniLibraryManagementSystem
             builder.Services.AddConfig(config)
                 .AddMyDependencyGroup();
 
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlServer(config.GetConnectionString("DefaultConnection"))
+                .Options;
+            ApplicationDbContext _context = new ApplicationDbContext(options);
+            SeedingData  seedData = new SeedingData(_context);
+
+            seedData.Seed();
             // Add services to the container.
 
             builder.Services.AddControllers();

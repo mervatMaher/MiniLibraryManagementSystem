@@ -30,7 +30,6 @@ namespace MiniLibraryManagementSystem.Controllers
         public async Task<IActionResult> AddBookInFavAsync(int BookId)
         {
             var UserId = User.FindFirstValue("uid");
-        
 
             var existBook = await _context.Books.FindAsync(BookId);
             if (existBook == null)

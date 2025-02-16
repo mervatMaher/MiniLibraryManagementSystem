@@ -4,6 +4,7 @@ using MiniLibraryManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace MiniLibraryManagementSystem.Controllers
 {
@@ -173,5 +174,154 @@ namespace MiniLibraryManagementSystem.Controllers
             return Ok(deleteBook);
         }
 
+        [HttpPost("AddExistAuthorsInBook")]
+        public async Task<IActionResult> AddExistAuthorsInBook(int BookId, ICollection<int> AuthorsIds)
+        {
+            var existBook = await _context.Books.FindAsync(BookId);
+            if (existBook == null)
+            {
+                var Message = new
+                {
+                    message = "there is no book With this Id"
+                };
+                return NotFound(Message);
+            }
+
+            if (AuthorsIds.Any())
+            {
+                var AuthorsNotFound = new List<int>();
+
+                foreach (var autherId in AuthorsIds)
+                {
+
+                    var existAuthor = await _context.Authors.Where(a => a.Id == autherId).FirstOrDefaultAsync();
+                    if (existAuthor == null)
+                    {
+                        AuthorsNotFound.Add(autherId);
+
+                    }
+                }
+                if (AuthorsNotFound.Any())
+                {
+                    var message = new
+                    {
+                        message = $"there is no Author with these IDs  {String.Join(",", AuthorsNotFound)} "
+                    };
+
+                    return NotFound(message);
+                }
+
+            }
+
+
+            var addExistAuthor = await _bookServices.AddExistAuthorsInBookAsync(BookId, AuthorsIds);
+            if (addExistAuthor == null)
+            {
+                var Message = new
+                {
+                    Message = "add exist Author in book service not working now, please try again later!"
+                };
+                return BadRequest(Message);
+            }
+
+            return Ok(addExistAuthor);
+        }
+
+        [HttpGet("GetBooks")]
+        public async Task<IActionResult> GetBooks()
+        {
+
+            var books = await _bookServices.GetBooksAsync();
+            if (!books.Any())
+            {
+                var MEssage = new
+                {
+                    Message = "there is no book or the service not working, please try again later!!"
+                };
+                return NotFound(MEssage);
+            }
+
+            return Ok(books);
+
+        }
+
+        [HttpGet("GetBookById")]
+        public async Task<IActionResult> GetBookById(int BookId)
+        {
+            var existBook = await _context.Books.FindAsync(BookId);
+            if (existBook == null)
+            {
+                var ExistBookMessage = new
+                {
+                    BookNotFoundMessage = "there is no book With this Id"
+                };
+                return NotFound(ExistBookMessage);
+
+            }
+
+            var GetBook = await _bookServices.GetBookByIdAsync(BookId);
+            if (GetBook == null)
+            {
+                var Message = new
+                {
+                    Message = "Get book Service Not working now, please try again later!!"
+                };
+                return BadRequest(Message);
+            }
+
+            return Ok(GetBook);
+        }
+
+        [HttpGet("AllAuthorsInBook")]
+        public async Task<IActionResult> AllAuthorsInBook(int BookId)
+        {
+            var existBook = await _context.Books.FindAsync(BookId);
+            if (existBook == null)
+            {
+                var ExistBookMessage = new
+                {
+                    BookNotFoundMessage = "there is no book With this Id"
+                };
+                return NotFound(ExistBookMessage);
+
+            }
+
+            var AuthorsInBook = await _bookServices.AllAuthorsInBook(BookId);
+            if (!AuthorsInBook.Any())
+            {
+                var AuthorsInBookMessage = new
+                {
+                    AuthorNotFoundMessage = "there is no Author in this Book"
+                };
+                return NotFound(AuthorsInBookMessage);
+            }
+
+            return Ok(AuthorsInBook);
+        }
+
+        [HttpPost("FilterWithPrice")]
+        public async Task<IActionResult> FilterWithPrice(FilterWithPriceViewModel filterWithPrice)
+        {
+            if (filterWithPrice.Price <= 0)
+            {
+                var Messsage = new
+                {
+                    Message = "Your have to choose price that you want filter "
+                };
+                return NotFound(Messsage);
+            }
+
+            var filterBooks = await _bookServices.FilterWithPriceAsync(filterWithPrice);
+            if (!filterBooks.Any())
+            {
+                var Message = new
+                {
+                    Message = "there is no books with this price with this Currency"
+                };
+                return NotFound(Message);
+            }
+
+            return Ok(filterBooks);
+        }
     }
 }
