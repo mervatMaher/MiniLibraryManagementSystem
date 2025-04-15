@@ -2,12 +2,18 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
+using MiniLibraryManagementSystem.Filters;
 
 namespace MiniLibraryManagementSystem.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [ApiVersion("3.0")]
     [Authorize]
+    [ValidateModelFilter]
+    [ServiceFilter(typeof(JwtExceptionFilter))]
+
 
     public class SecureController : ControllerBase
     {

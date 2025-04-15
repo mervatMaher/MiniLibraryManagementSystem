@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniLibraryManagementSystem.Data;
+using MiniLibraryManagementSystem.Filters;
 using MiniLibraryManagementSystem.ModelServices.IServices;
 using MiniLibraryManagementSystem.ViewModels;
 
@@ -9,6 +10,7 @@ namespace MiniLibraryManagementSystem.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [ValidateModelFilter]
     public class AuthorController : ControllerBase
     {
         private readonly IAuthorServices _authorServices;

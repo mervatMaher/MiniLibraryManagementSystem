@@ -5,12 +5,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using MiniLibraryManagementSystem.ModelServices.IServices;
+using Asp.Versioning;
+using MiniLibraryManagementSystem.Filters;
 
 namespace MiniLibraryManagementSystem.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [ApiVersion("2.0")]  
     [Authorize]
+    [ValidateModelFilter]
     public class FavoriteController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

@@ -5,20 +5,26 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MiniLibraryManagementSystem.Filters;
 
 namespace MiniLibraryManagementSystem.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin")]
+    [ValidateModelFilter]
+    [ServiceFilter(typeof(JwtExceptionFilter))]
     public class BookController : ControllerBase
     {
         private readonly IBookServices _bookServices;
+        private readonly ILogger<BookController> _logger;
         private readonly ApplicationDbContext _context;
-        public BookController(ApplicationDbContext context, IBookServices bookServices)
+        public BookController(ApplicationDbContext context, IBookServices bookServices
+            , ILogger<BookController> logger)
         {
             _context = context;
             _bookServices = bookServices;
+            _logger = logger;
         }
         [HttpPost("AddBookWithSolid")]
         public async Task<IActionResult> AddBookWithSolid(AddBookViewModel bookView)
@@ -230,19 +236,25 @@ namespace MiniLibraryManagementSystem.Controllers
         [HttpGet("GetBooks")]
         public async Task<IActionResult> GetBooks()
         {
-
-            var books = await _bookServices.GetBooksAsync();
-            if (!books.Any())
+            _logger.LogInformation("GetBooks method called at {time}", DateTime.UtcNow);
+            try
             {
-                var MEssage = new
+                var books = await _bookServices.GetBooksAsync();
+                if (!books.Any())
                 {
-                    Message = "there is no book or the service not working, please try again later!!"
-                };
-                return NotFound(MEssage);
+                    var MEssage = new
+                    {
+                        Message = "there is no book or the service not working, please try again later!!"
+                    };
+                    return NotFound(MEssage);
+                }
+                return Ok(books);
             }
-
-            return Ok(books);
-
+            catch (Exception ex)
+            {          
+                _logger.LogError(ex, "An error occurred in DoSomething.");
+                throw;
+            }
         }
 
         [HttpGet("GetBookById")]
@@ -251,6 +263,7 @@ namespace MiniLibraryManagementSystem.Controllers
             var existBook = await _context.Books.FindAsync(BookId);
             if (existBook == null)
             {
+                _logger.LogWarning("BookId {BookId} not found", BookId);
                 var ExistBookMessage = new
                 {
                     BookNotFoundMessage = "there is no book With this Id"

@@ -11,6 +11,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using static System.Net.WebRequestMethods;
 using MiniLibraryManagementSystem.SeedData;
+using Asp.Versioning.ApiExplorer;
+using Serilog;
 
 namespace MiniLibraryManagementSystem
 {
@@ -21,58 +23,26 @@ namespace MiniLibraryManagementSystem
             var builder = WebApplication.CreateBuilder(args);
             var config = builder.Configuration;
 
-            //builder.Logging.ClearProviders();
-            //builder.Logging.AddConsole();
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
-            options.SignIn.RequireConfirmedEmail = true)
-                .AddRoles<IdentityRole>()
-                .AddEntityFrameworkStores<ApplicationDbContext>()
-                .AddDefaultTokenProviders();
-
-           
-
+            Log.Logger = new LoggerConfiguration()
+                .ReadFrom.Configuration(config)
+                .Enrich.FromLogContext()
+                .WriteTo.File("Logs/log.txt", rollingInterval : RollingInterval.Day)
+                .CreateLogger();
 
             // user-secret JWT
-            builder.Configuration.AddUserSecrets<Program>();
-
-            builder.Services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-
-            }).AddJwtBearer(o =>
-            {
-                o.RequireHttpsMetadata = false;
-                o.SaveToken = true;
-                o.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:JWTSecretKey"])),
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidIssuer = "https://localhost:7218",
-                    ValidAudience = "https://localhost:7218",
-                    ClockSkew = TimeSpan.Zero
-                };
-            });
-
-            builder.Services.AddAuthorization();
-
-            //builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
-            // dependency injection using Register groups of services with extension methods
-            // حقيقي مبسوطة اني طبقت الجزئية دي بجد 
+            config.AddUserSecrets<Program>();
+          
             builder.Services.AddConfig(config)
                 .AddMyDependencyGroup();
 
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
                 .UseSqlServer(config.GetConnectionString("DefaultConnection"))
                 .Options;
+
             ApplicationDbContext _context = new ApplicationDbContext(options);
             SeedingData  seedData = new SeedingData(_context);
 
@@ -87,7 +57,16 @@ namespace MiniLibraryManagementSystem
             //builder.Services.AddSwaggerGen();
             builder.Services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new() { Title = "MiniLibraryManagementSystem", Version = "v1" });
+                var provider = builder.Services.BuildServiceProvider().GetRequiredService<IApiVersionDescriptionProvider>();
+                foreach(var description in provider.ApiVersionDescriptions)
+                {
+                    c.SwaggerDoc(description.GroupName, new Microsoft.OpenApi.Models.OpenApiInfo
+                    {
+                        Title = "MiniLibraryManagementSystem",
+                        Version = description.ApiVersion.ToString(),
+                    });
+                }
+
                 c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
                 {
                     Name = "Authorization",
@@ -113,13 +92,24 @@ namespace MiniLibraryManagementSystem
                 });
             });
 
+            builder.Host.UseSerilog();
             var app = builder.Build();
 
+            app.UseSerilogRequestLogging();
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(options =>
+                {
+                    var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+                    foreach (var description in provider.ApiVersionDescriptions)
+                    {
+                        options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json",
+                            $"MiniLibraryManagementSystem {description.ApiVersion}");
+                    }
+                });
+
             }
 
             app.UseStaticFiles();

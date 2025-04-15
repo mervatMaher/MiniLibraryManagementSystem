@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MiniLibraryManagementSystem.Filters;
 
 namespace MiniLibraryManagementSystem.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [ValidateModelFilter]
     public class RolesController : ControllerBase
     {
         private readonly IRolesServices _rolesServices;
